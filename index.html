@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0b1020">
-  <title>WIMA LAB CLIPPER — Free Video Studio</title>
+  <title>WIMA LAB AI PODCAST ANALYZER — Free Video Studio</title>
   <style>
     :root{
       --bg:#080d19;--panel:#10182a;--panel2:#151f35;--line:#26324b;
@@ -94,8 +94,8 @@
     <div class="brand">
       <div class="logo">W</div>
       <div>
-        <h1>WIMA LAB <span style="color:#a99aff">CLIPPER</span></h1>
-        <div class="subbrand">VIDEO REPURPOSING STUDIO</div>
+        <h1>WIMA LAB <span style="color:#a99aff">AI PODCAST ANALYZER</span></h1>
+        <div class="subbrand">AI-ASSISTED PODCAST HIGHLIGHT FINDER</div>
       </div>
     </div>
     <div class="free">✦ FREE EDITION</div>
@@ -105,7 +105,7 @@
     <div>
       <div class="eyebrow">Create more with less</div>
       <h2>Video panjang.<br><span style="background:linear-gradient(90deg,#b6a8ff,#58ddff);-webkit-background-clip:text;background-clip:text;color:transparent">Konten pendek.</span></h2>
-      <p>Bagi podcast menjadi klip 60 detik, siapkan video vertikal, dan tambahkan satu watermark transparan. Subtitle bisa ditambahkan nanti di CapCut.</p>
+      <p>Analisis podcast panjang untuk menemukan bagian yang paling bernilai. Pilih kandidat hasil AI, lalu gunakan pemotong 60 detik dan edit subtitle di CapCut.</p>
     </div>
     <span class="pill">LOCAL WORKSPACE · BETA</span>
   </section>
@@ -203,9 +203,27 @@
         <div id="resultBox" class="result"></div>
       </div>
     </section>
+
+    <section class="panel" style="grid-column:1/-1">
+      <div class="panel-head"><h3>03 / AI Podcast Analyzer</h3><span class="step">BETA</span></div>
+      <div class="panel-body">
+        <div class="notice" style="margin-top:0">Analisis mengirim video yang dipilih ke layanan AI Google melalui backend yang bro siapkan. Gunakan hanya video yang berhak bro proses. Hasil AI adalah kandidat untuk ditinjau, bukan jaminan bahwa setiap klaim benar atau bebas hak cipta.</div>
+        <div class="row" style="margin-top:16px">
+          <div class="field"><label for="analyzerEndpoint">URL backend Cloudflare Worker</label><input id="analyzerEndpoint" type="url" placeholder="https://nama-worker.nama-akun.workers.dev"></div>
+          <div class="field"><label for="analyzerAccessCode">Kode akses backend</label><input id="analyzerAccessCode" type="password" autocomplete="off" placeholder="Kode akses yang bro buat"></div>
+        </div>
+        <div class="field"><label for="analysisFocus">Fokus analisis</label><select id="analysisFocus"><option value="balanced">Seimbang: insight, edukasi, dan argumen</option><option value="education">Edukasi dan penjelasan yang bisa dipelajari</option><option value="claims">Klaim faktual yang perlu diverifikasi</option><option value="story">Cerita, pengalaman, dan pelajaran hidup</option></select></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button id="analyzeBtn" class="btn btn-primary" type="button" disabled>Analisis video yang dipilih</button>
+          <button id="clearAnalysisBtn" class="btn btn-quiet" type="button">Bersihkan hasil</button>
+        </div>
+        <div id="analysisStatus" class="status" aria-live="polite"><span class="dot"></span><span>Pilih video terlebih dahulu, lalu masukkan URL backend.</span></div>
+        <div id="analysisResults" style="margin-top:14px"></div>
+      </div>
+    </section>
   </main>
 
-  <div class="footer">WIMA LAB CLIPPER · Free local prototype · File video tetap di perangkat kamu, kecuali kamu membuka URL eksternal.</div>
+  <div class="footer">WIMA LAB AI PODCAST ANALYZER · Kliping dilakukan di browser; saat analisis AI, video dikirim ke Google AI melalui backend yang dikonfigurasi.</div>
 </div>
 
 <script>
@@ -215,6 +233,7 @@
   const canvas = $('previewCanvas');
   const ctx = canvas.getContext('2d');
   let videoUrl = null;
+  let selectedVideoFile = null;
   let logoUrl = null;
   let logoImage = null;
   let animationId = null;
@@ -304,6 +323,8 @@
   }
   function loadVideoFile(file){
     if(!file)return;
+    selectedVideoFile = file;
+    if(typeof updateAnalyzeAvailability === 'function') updateAnalyzeAvailability();
     if(!file.type.startsWith('video/')){setSourceStatus('File bukan video yang dikenali browser.','err');return;}
     if(videoUrl)URL.revokeObjectURL(videoUrl);
     videoUrl=URL.createObjectURL(file);
@@ -345,7 +366,8 @@
       const parsed=new URL(url);
       if(!['http:','https:'].includes(parsed.protocol))throw new Error();
       if(videoUrl)URL.revokeObjectURL(videoUrl);
-      videoUrl=null;video.src=parsed.href;video.load();
+      videoUrl=null;selectedVideoFile=null;video.src=parsed.href;video.load();
+      updateAnalyzeAvailability();
       $('fileName').textContent=parsed.hostname+' · video online';
       $('videoInfo').classList.remove('hidden');
       setSourceStatus('Mencoba membuka video URL…');
@@ -501,7 +523,110 @@
       isExporting=false;$('exportBtn').disabled=false;drawFrame();
     }
   });
+
+  // AI Podcast Analyzer: video upload is chunked through the Worker; API key stays server-side.
+  const analyzerStatus = (message, type='') => {
+    const host=$('analysisStatus'); host.innerHTML='';
+    const dot=document.createElement('span'); dot.className='dot'+(type?' '+type:'');
+    const txt=document.createElement('span'); txt.textContent=message; host.append(dot,txt);
+  };
+  const analyzerBase = () => $('analyzerEndpoint').value.trim().replace(/\/+$/,'');
+  function updateAnalyzeAvailability(){
+    $('analyzeBtn').disabled = !(selectedVideoFile && analyzerBase() && $('analyzerAccessCode').value.trim()) || isExporting;
+  }
+  $('videoFile').addEventListener('change',updateAnalyzeAvailability);
+  $('analyzerEndpoint').addEventListener('input',updateAnalyzeAvailability);
+  $('analyzerAccessCode').addEventListener('input',updateAnalyzeAvailability);
+  $('clearAnalysisBtn').addEventListener('click',()=>{ $('analysisResults').innerHTML=''; analyzerStatus('Hasil analisis dibersihkan.'); });
+
+  async function analyzerRequest(path, options={}){
+    const headers = new Headers(options.headers || {});
+    headers.set('X-App-Access-Code',$('analyzerAccessCode').value.trim());
+    const response=await fetch(analyzerBase()+path,{...options,headers});
+    const data=await response.json().catch(()=>({error:'Respons backend bukan JSON.'}));
+    if(!response.ok) throw new Error(data.error || `Permintaan gagal (${response.status}).`);
+    return data;
+  }
+  function parseAnalysisJson(text){
+    let cleaned=String(text||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+    const first=cleaned.indexOf('{'), last=cleaned.lastIndexOf('}');
+    if(first>=0&&last>first) cleaned=cleaned.slice(first,last+1);
+    return JSON.parse(cleaned);
+  }
+  function renderAnalysisResults(items){
+    const host=$('analysisResults'); host.innerHTML='';
+    if(!Array.isArray(items)||!items.length){host.textContent='AI tidak menemukan kandidat yang sesuai. Coba fokus analisis lain.';return;}
+    items.sort((a,b)=>(Number(b.score)||0)-(Number(a.score)||0));
+    items.forEach((item,index)=>{
+      const start=Math.max(0,Number(item.start_seconds)||0);
+      const end=Math.max(start+1,Math.min(getDuration()||Infinity,Number(item.end_seconds)||start+60));
+      const card=document.createElement('div');
+      card.style.cssText='border:1px solid #2b3853;border-radius:12px;padding:14px;margin-bottom:10px;background:#0a1221';
+      const top=document.createElement('div');top.style.cssText='display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap';
+      const title=document.createElement('strong');title.textContent=`${index+1}. ${item.title||'Kandidat klip'}`;
+      const score=document.createElement('span');score.className='pill';score.textContent=`Skor ${Math.max(0,Math.min(100,Number(item.score)||0))}/100`;
+      top.append(title,score);card.append(top);
+      const time=document.createElement('div');time.className='tiny';time.style.margin='7px 0';time.textContent=`${fmt(start)} – ${fmt(end)} · ${Math.round(end-start)} detik`;card.append(time);
+      for(const [label,value] of [['Ringkasan',item.summary],['Alasan dipilih',item.why_selected],['Pemeriksaan informasi',item.fact_check_note],['Catatan konteks',item.context_note]]){
+        if(!value)continue;
+        const p=document.createElement('p');p.style.cssText='font-size:12px;color:#cbd5e8;margin:7px 0';
+        const b=document.createElement('b');b.textContent=label+': ';p.append(b,document.createTextNode(String(value)));card.append(p);
+      }
+      const status=document.createElement('div');status.className='tiny';status.style.margin='8px 0';status.textContent='Status: '+(item.claim_status||'Belum diverifikasi');card.append(status);
+      const btn=document.createElement('button');btn.type='button';btn.className='btn btn-secondary';btn.textContent='Gunakan rentang ini di editor';
+      btn.addEventListener('click',()=>{
+        const clipEnd=Math.min(end,start+60,getDuration()||end);
+        $('startTime').value=start.toFixed(1);$('endTime').value=clipEnd.toFixed(1);syncRanges();
+        try{video.currentTime=start;drawFrame();}catch(e){}
+        document.querySelector('.panel:nth-child(2)')?.scrollIntoView({behavior:'smooth',block:'start'});
+        setExportStatus('Rentang kandidat AI dipilih. Periksa konteksnya, lalu ekspor jika sesuai.','ok');
+      });
+      card.append(btn);host.append(card);
+    });
+  }
+  $('analyzeBtn').addEventListener('click',async()=>{
+    const file=selectedVideoFile;
+    if(!file){analyzerStatus('Pilih file video melalui tombol Pilih video terlebih dahulu.','err');return;}
+    if(!analyzerBase()||!$('analyzerAccessCode').value.trim()){analyzerStatus('Masukkan URL backend dan kode akses.','err');return;}
+    if(!file.type.startsWith('video/')){analyzerStatus('File yang dipilih bukan video.','err');return;}
+    const chunkSize=4*1024*1024;
+    let uploadedFile=null;
+    $('analyzeBtn').disabled=true;$('analysisResults').innerHTML='';
+    try{
+      analyzerStatus('Memulai unggahan aman ke layanan analisis…');
+      const start=await analyzerRequest('/api/start-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({displayName:file.name,mimeType:file.type||'video/mp4',size:file.size})});
+      if(!start.uploadUrl)throw new Error('Backend tidak mengembalikan sesi unggah.');
+      let offset=0;
+      while(offset<file.size){
+        const end=Math.min(file.size,offset+chunkSize);const chunk=file.slice(offset,end);
+        const form=new FormData();form.append('uploadUrl',start.uploadUrl);form.append('offset',String(offset));form.append('final',String(end===file.size));form.append('chunk',chunk,'chunk.bin');
+        analyzerStatus(`Mengunggah video ke AI: ${Math.round(end/file.size*100)}%`);
+        const response=await analyzerRequest('/api/upload-chunk',{method:'POST',body:form});
+        offset=end;
+        if(response.file)uploadedFile=response.file;
+      }
+      const uploadedName=uploadedFile?.name || start.fileName;
+      if(!uploadedName)throw new Error('Unggahan selesai tetapi ID file tidak diterima dari Google.');
+      const pollStart=Date.now();
+      while(Date.now()-pollStart<300000){
+        const st=await analyzerRequest('/api/file-status?name='+encodeURIComponent(uploadedName));
+        if(st.file?.state==='ACTIVE'){uploadedFile=st.file;break;}
+        if(st.file?.state==='FAILED')throw new Error('Google gagal memproses file video.');
+        analyzerStatus('Google sedang menyiapkan video untuk dianalisis…');
+        await new Promise(r=>setTimeout(r,4000));
+      }
+      if(!uploadedFile || uploadedFile.state!=='ACTIVE')throw new Error('Google belum selesai menyiapkan video setelah 5 menit. Coba lagi nanti.');
+      analyzerStatus('Video siap. AI sedang menemukan kandidat klip; proses dapat memerlukan beberapa menit.');
+      const result=await analyzerRequest('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileName:uploadedFile.name,focus:$('analysisFocus').value,duration:getDuration(),mimeType:uploadedFile.mimeType||file.type||'video/mp4'})});
+      const parsed=typeof result.analysis==='string'?parseAnalysisJson(result.analysis):(result.analysis||result);
+      renderAnalysisResults(parsed.candidates||parsed.clips||[]);
+      analyzerStatus(`Analisis selesai. Ditemukan ${(parsed.candidates||parsed.clips||[]).length} kandidat untuk ditinjau.`,'ok');
+    }catch(err){console.error(err);analyzerStatus(err.message||'Analisis gagal. Periksa URL backend, kode akses, dan kuota API.','err');}
+    finally{updateAnalyzeAvailability();}
+  });
+
   setCanvasSize();
+  updateAnalyzeAvailability();
 })();
 </script>
 </body>
