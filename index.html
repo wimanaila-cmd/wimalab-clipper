@@ -589,7 +589,7 @@
     if(!file){analyzerStatus('Pilih file video melalui tombol Pilih video terlebih dahulu.','err');return;}
     if(!analyzerBase()||!$('analyzerAccessCode').value.trim()){analyzerStatus('Masukkan URL backend dan kode akses.','err');return;}
     if(!file.type.startsWith('video/')){analyzerStatus('File yang dipilih bukan video.','err');return;}
-    const chunkSize=4*1024*1024;
+    const chunkSize=8*1024*1024;
     let uploadedFile=null;
     $('analyzeBtn').disabled=true;$('analysisResults').innerHTML='';
     try{
