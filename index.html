@@ -66,7 +66,7 @@
     canvas{display:block;width:100%;height:100%;object-fit:contain}
     .canvas-overlay{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding:8% 5% 12%}
     .subtitle-preview{font-size:clamp(12px,1.5vw,17px);font-weight:900;color:#fff;text-align:center;text-shadow:2px 2px 2px #000,-2px -2px 2px #000,0 3px 6px #000;background:#0004;padding:3px 5px;overflow-wrap:anywhere}
-    .watermark-preview{position:absolute;right:7%;top:5%;max-width:35%;max-height:13%;object-fit:contain;opacity:.9}
+    .watermark-preview{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:42%;max-height:22%;object-fit:contain;opacity:.18}
     .preview-meta{min-width:0}
     .video-name{font-size:13px;font-weight:800;overflow-wrap:anywhere;margin-bottom:5px}
     .meta-line{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px;margin:13px 0 7px}
@@ -105,7 +105,7 @@
     <div>
       <div class="eyebrow">Create more with less</div>
       <h2>Video panjang.<br><span style="background:linear-gradient(90deg,#b6a8ff,#58ddff);-webkit-background-clip:text;background-clip:text;color:transparent">Konten pendek.</span></h2>
-      <p>Siapkan klip vertikal, subtitle, dan branding dalam satu workspace. Berjalan di browser kamu tanpa akun dan tanpa API berbayar.</p>
+      <p>Bagi podcast menjadi klip 60 detik, siapkan video vertikal, dan tambahkan satu watermark transparan. Subtitle bisa ditambahkan nanti di CapCut.</p>
     </div>
     <span class="pill">LOCAL WORKSPACE · BETA</span>
   </section>
@@ -151,10 +151,7 @@
           <div class="stage">
             <div id="canvasShell" class="canvas-shell">
               <canvas id="previewCanvas" width="360" height="640"></canvas>
-              <div class="canvas-overlay">
-                <img id="watermarkPreview" class="watermark-preview hidden" alt="Pratinjau logo">
-                <div id="subtitlePreview" class="subtitle-preview">Subtitle kamu muncul di sini</div>
-              </div>
+
             </div>
           </div>
           <div class="preview-meta">
@@ -172,32 +169,35 @@
         <div class="section-title">POTONGAN VIDEO</div>
         <div class="range-pair">
           <div class="field"><label for="startTime">Mulai (detik)</label><input id="startTime" type="number" min="0" step="0.1" value="0"></div>
-          <div class="field"><label for="endTime">Selesai (detik)</label><input id="endTime" type="number" min="0" step="0.1" value="15"></div>
+          <div class="field"><label for="endTime">Selesai (detik)</label><input id="endTime" type="number" min="0" step="0.1" value="60"></div>
         </div>
         <div class="meta-line"><span>Durasi klip</span><span id="clipDuration" class="time-display">15 detik</span></div>
         <div class="field"><label for="startRange">Geser titik mulai</label><input id="startRange" type="range" min="0" max="100" value="0"></div>
-        <div class="field"><label for="endRange">Geser titik akhir</label><input id="endRange" type="range" min="0" max="100" value="15"></div>
+        <div class="field"><label for="endRange">Geser titik akhir</label><input id="endRange" type="range" min="0" max="100" value="60"></div>
+
+        <div class="section-title">PEMBAGIAN OTOMATIS</div>
+        <div class="field"><label for="segmentLength">Panjang setiap klip</label><select id="segmentLength"><option value="60" selected>60 detik</option></select><div class="tiny" style="margin-top:6px">Video akan dibagi berurutan menjadi klip maksimal 60 detik. Pilih klip dari daftar, lalu ekspor satu per satu.</div></div>
+        <div id="clipList" class="field" aria-live="polite"><div class="tiny">Unggah video untuk membuat daftar klip otomatis.</div></div>
 
         <div class="section-title">FORMAT & BRANDING</div>
         <div class="row">
           <div class="field"><label for="aspectRatio">Rasio output</label><select id="aspectRatio"><option value="9:16">Vertikal 9:16</option><option value="1:1">Kotak 1:1</option><option value="16:9">Landscape 16:9</option></select></div>
           <div class="field"><label for="outputSize">Resolusi</label><select id="outputSize"><option value="720">720p (lebih ringan)</option><option value="1080">1080p</option></select></div>
         </div>
-        <div class="field"><label for="subtitleText">Teks subtitle / caption</label><textarea id="subtitleText" rows="2" placeholder="Ketik subtitle untuk klip ini...">Subtitle kamu muncul di sini</textarea></div>
-        <div class="row">
-          <div class="field"><label for="subtitleColor">Warna subtitle</label><div class="color-row"><input id="subtitleColor" type="color" value="#ffffff"><span class="tiny">Warna teks</span></div></div>
-          <div class="field"><label for="subtitleSize">Ukuran subtitle</label><select id="subtitleSize"><option value="24">Kecil</option><option value="32" selected>Sedang</option><option value="42">Besar</option></select></div>
-        </div>
+        <div class="notice" style="margin:12px 0 16px">Subtitle dimatikan. Tambahkan subtitle otomatis nanti melalui CapCut.</div>
+        <textarea id="subtitleText" class="hidden" rows="2"></textarea>
+        <input id="subtitleColor" class="hidden" type="color" value="#ffffff">
+        <select id="subtitleSize" class="hidden"><option value="32" selected>Sedang</option></select>
         <div class="field">
           <label for="logoFile">Logo / watermark (opsional)</label>
           <input id="logoFile" type="file" accept="image/*" style="display:block;width:100%;background:#0a1221;border:1px solid #2b3853;border-radius:10px;padding:9px">
-          <div class="tiny" style="margin-top:6px">Pilih PNG transparan atau gambar lain. Logo ditampilkan pada pratinjau.</div>
+          <div class="tiny" style="margin-top:6px">Pilih file logo PNG. Logo tampil satu kali di tengah video dengan transparansi 18%.</div>
         </div>
-        <div class="field"><label for="watermarkText">Teks watermark (opsional)</label><input id="watermarkText" type="text" value="WIMA LAB" placeholder="Nama channel / brand"></div>
-        <label class="checkline"><input id="burnSubtitle" type="checkbox" checked> Tampilkan subtitle di hasil ekspor canvas</label>
+        <input id="watermarkText" class="hidden" type="text" value="">
+        <input id="burnSubtitle" class="hidden" type="checkbox">
         <div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <button id="resetBtn" class="btn btn-quiet" type="button">Reset editor</button>
-          <button id="exportBtn" class="btn btn-primary" type="button" disabled>Ekspor klip</button>
+          <button id="exportBtn" class="btn btn-primary" type="button" disabled>Ekspor klip terpilih</button>
         </div>
         <div id="exportStatus" class="status"><span class="dot"></span><span>Ekspor siap setelah video dimuat.</span></div>
         <div id="resultBox" class="result"></div>
@@ -283,44 +283,17 @@
       ctx.fillStyle='#93a0bd';ctx.font=`${Math.max(10,w*.035)}px system-ui`;
       ctx.fillText('Pilih video untuk memulai',w/2,h*.52);
     }
-    const burn=$('burnSubtitle').checked;
-    const subtitle=$('subtitleText').value.trim();
-    if(burn && subtitle) {
-      const size=Math.max(16,Number($('subtitleSize').value)*w/360);
-      ctx.font=`900 ${size}px system-ui, sans-serif`;
-      ctx.textAlign='center';ctx.textBaseline='middle';
-      const maxWidth=w*.88;
-      const words=subtitle.split(/\s+/);const lines=[];let line='';
-      for(const word of words){
-        const test=line?line+' '+word:word;
-        if(ctx.measureText(test).width>maxWidth && line){lines.push(line);line=word;}else line=test;
-      }
-      if(line) lines.push(line);
-      const shown=lines.slice(-4);
-      const lineHeight=size*1.18;
-      const yStart=h*.83-(shown.length-1)*lineHeight/2;
-      shown.forEach((txt,i)=>{
-        const y=yStart+i*lineHeight;
-        ctx.lineWidth=Math.max(3,size*.16);ctx.strokeStyle='#000';ctx.lineJoin='round';ctx.strokeText(txt,w/2,y,maxWidth);
-        ctx.fillStyle=$('subtitleColor').value;ctx.fillText(txt,w/2,y,maxWidth);
-      });
-    }
-    const watermark=$('watermarkText').value.trim();
-    if(watermark){
-      ctx.save();ctx.font=`800 ${Math.max(12,w*.035)}px system-ui`;ctx.textAlign='right';ctx.textBaseline='top';
-      ctx.lineWidth=Math.max(2,w*.004);ctx.strokeStyle='#000a';ctx.strokeText(watermark,w*.95,h*.04);
-      ctx.fillStyle='#ffffffdd';ctx.fillText(watermark,w*.95,h*.04);ctx.restore();
-    }
+    // Subtitle sengaja tidak dibakar ke video; subtitle ditambahkan nanti di CapCut.
+    // Satu logo saja, di tengah frame, putih/transparan 18%.
     if(logoImage){
-      const maxW=w*.25,maxH=h*.12,scale=Math.min(maxW/logoImage.width,maxH/logoImage.height);
+      const maxW=w*.42,maxH=h*.22,scale=Math.min(maxW/logoImage.width,maxH/logoImage.height);
       const lw=logoImage.width*scale,lh=logoImage.height*scale;
-      ctx.drawImage(logoImage,w*.05,h*.05,lw,lh);
+      ctx.save();ctx.globalAlpha=.18;ctx.drawImage(logoImage,(w-lw)/2,(h-lh)/2,lw,lh);ctx.restore();
+    } else {
+      ctx.save();ctx.globalAlpha=.18;ctx.fillStyle='#ffffff';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.font=`900 ${Math.max(20,w*.09)}px system-ui, sans-serif`;ctx.fillText('WIMA LAB',w/2,h/2);ctx.restore();
     }
-    $('subtitlePreview').textContent=subtitle||'';
-    $('subtitlePreview').style.color=$('subtitleColor').value;
-    $('subtitlePreview').style.fontSize=`${Math.max(11,Number($('subtitleSize').value)*.48)}px`;
-    if(logoUrl){$('watermarkPreview').src=logoUrl;$('watermarkPreview').classList.remove('hidden');}
-    else $('watermarkPreview').classList.add('hidden');
+
     $('currentTime').textContent=fmt(video.currentTime||0);
     if(getDuration()) $('previewSeek').value=(video.currentTime/getDuration())*100;
   }
@@ -350,12 +323,12 @@
     const d=getDuration();
     $('durationInfo').textContent=fmt(d);
     $('resolutionInfo').textContent=`${video.videoWidth} × ${video.videoHeight}`;
-    $('startTime').value='0';$('endTime').value=Math.min(15,d).toFixed(1);
+    $('startTime').value='0';$('endTime').value=Math.min(60,d).toFixed(1);
     for(const id of ['startRange','endRange']){$(id).max=d||100;}
-    $('startRange').value=0;$('endRange').value=Math.min(15,d);
+    $('startRange').value=0;$('endRange').value=Math.min(60,d);
     $('previewSeek').value=0;$('previewSeek').max=100;
     $('playBtn').disabled=false;$('pauseBtn').disabled=false;$('exportBtn').disabled=false;
-    setSourceStatus('Video siap diedit.','ok');updateClipDuration();setCanvasSize();
+    setSourceStatus('Video siap. Klip 60 detik dibuat otomatis.','ok');updateClipDuration();setCanvasSize();buildClipList();
     video.currentTime=0;
   });
   video.addEventListener('error',()=>setSourceStatus('Video tidak dapat dibuka. Coba file MP4 H.264 atau format browser yang didukung.','err'));
@@ -398,12 +371,27 @@
     $('startRange').value=s;$('endRange').value=e;
     updateClipDuration();
   }
+  function buildClipList(){
+    const d=getDuration();const length=60;const host=$('clipList');host.innerHTML='';
+    if(!d){host.innerHTML='<div class="tiny">Durasi video belum tersedia.</div>';return;}
+    const count=Math.ceil(d/length);
+    const summary=document.createElement('div');summary.className='tiny';summary.style.marginBottom='9px';summary.textContent=`Ditemukan ${count} klip dari video berdurasi ${fmt(d)}.`;host.append(summary);
+    for(let i=0;i<count;i++){
+      const start=i*length,end=Math.min(d,start+length);
+      const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;margin-bottom:7px;border:1px solid #2b3853;border-radius:10px;background:#0a1221';
+      const label=document.createElement('div');label.style.cssText='font-size:12px;font-weight:750';label.textContent=`Klip ${String(i+1).padStart(2,'0')} · ${fmt(start)}–${fmt(end)}`;
+      const btn=document.createElement('button');btn.type='button';btn.className='btn btn-secondary';btn.style.cssText='padding:7px 10px;font-size:11px;white-space:nowrap';btn.textContent='Pilih klip';
+      btn.addEventListener('click',()=>{ $('startTime').value=start.toFixed(1);$('endTime').value=end.toFixed(1);syncRanges();video.currentTime=start;drawFrame();setExportStatus(`Klip ${i+1} dipilih. Klik Ekspor klip terpilih.`); });
+      row.append(label,btn);host.append(row);
+    }
+  }
   function updateClipDuration(){
     const {start,end}=selectedRange();
     $('clipDuration').textContent=`${Math.max(0,end-start).toFixed(1)} detik`;
   }
   ['aspectRatio','outputSize'].forEach(id=>$(id).addEventListener('change',setCanvasSize));
-  ['subtitleText','subtitleColor','subtitleSize','watermarkText','burnSubtitle'].forEach(id=>{
+  $('segmentLength').addEventListener('change',buildClipList);
+  ['watermarkText'].forEach(id=>{
     $(id).addEventListener('input',drawFrame);$(id).addEventListener('change',drawFrame);
   });
   $('logoFile').addEventListener('change',e=>{
@@ -414,8 +402,8 @@
     logoImage.src=logoUrl;
   });
   $('resetBtn').addEventListener('click',()=>{
-    $('subtitleText').value='Subtitle kamu muncul di sini';$('subtitleColor').value='#ffffff';
-    $('subtitleSize').value='32';$('watermarkText').value='WIMA LAB';$('burnSubtitle').checked=true;
+    $('subtitleText').value='';$('subtitleColor').value='#ffffff';
+    $('subtitleSize').value='32';$('watermarkText').value='';$('burnSubtitle').checked=false;
     $('aspectRatio').value='9:16';$('outputSize').value='720';
     setCanvasSize();drawFrame();
   });
